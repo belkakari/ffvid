@@ -14,7 +14,7 @@ import wandb
 
 import ffvid
 from ffvid import FMLP, FramesDataset, GaussianFourierFeatureTransform, \
-    generate_video, set_random_seed, setup_logger, LFF
+    generate_video, set_random_seed, setup_logger, LFF, ModulatedMLP
 
 
 parser = argparse.ArgumentParser(description='Train videofitting')
@@ -29,19 +29,32 @@ with open(config_path) as f:
 experiment_name = config['train']['experiment_name']
 seed = config['train']['seed']
 device = config['train']['device']
-phase_mod = config['generator']['phase_mod']
-phase_mod_type = config['generator']['phase_mod_type']
-internal_dim = config['generator']['internal_dim']
-num_layers = config['generator']['num_layers']
-act = getattr(nn, config['generator']['act'])()
+save_model = config['train']['save_model']
+checkpoint = config['train'].get('checkpoint')
+output_folder = config['train']['output_folder']
+
 dset_folder = config['data']['dset_folder']
 batch_size = config['data']['batch_size']
 resolution = config['data']['resolution']
-ff_func = getattr(ffvid, config['generator']['ff_func'])
-save_model = config['train']['save_model']
-checkpoint = config['train'].get('checkpoint')
-gen_conv = getattr(ffvid, config['generator']['gen_conv'])
-output_folder = config['train']['output_folder']
+
+phase_mod = config['generator']['phase_mod']
+phase_mod_type = config['generator']['phase_mod_type']
+
+renderrer = getattr(ffvid, config['generator']['renderrer']['arch'])
+internal_dim_rend = config['generator']['renderrer']['internal_dim']
+num_layers_rend = config['generator']['renderrer']['num_layers']
+gen_conv = getattr(ffvid, config['generator']['renderrer']['conv'])
+num_freqs_rend = config['generator']['renderrer']['num_freqs']
+ff_func_rend = getattr(ffvid, config['generator']['renderrer']['ff_func'])
+act_rend = getattr(nn, config['generator']['renderrer']['act'])()
+
+modulator = getattr(ffvid, config['generator']['modulator']['arch'])
+internal_dim_mod = config['generator']['modulator']['internal_dim']
+num_layers_mod = config['generator']['modulator']['num_layers']
+mod_conv = getattr(ffvid, config['generator']['modulator']['conv'])
+num_freqs_mod = config['generator']['modulator']['num_freqs']
+ff_func_mod = getattr(ffvid, config['generator']['modulator']['ff_func'])
+act_mod = getattr(nn, config['generator']['modulator']['act'])()
 
 curdate = datetime.now()
 experiment_name = f'{experiment_name}_{curdate.hour}_{curdate.minute}_{curdate.second}'
@@ -60,14 +73,26 @@ setup_logger('base', artefacts_folder,
              level=logging_level, screen=True, tofile=True)
 logger = logging.getLogger('base')
 
-fmlp = FMLP(internal_dim=internal_dim,
-            num_layers=num_layers,
-            act=act,
-            ff_func=ff_func,
-            phase_mod_type=phase_mod_type,
-            num_input_channels=2 if phase_mod else 3,
-            conv=gen_conv,
-            ).to(device)
+renderrer = renderrer(internal_dim=internal_dim_rend,
+                      num_layers=num_layers_rend,
+                      act=act_rend, 
+                      ff_func=ff_func_rend,
+                      num_input_channels=2,
+                      conv=gen_conv,
+                      num_freqs=num_freqs_rend,
+                      )
+
+modulator = modulator(num_input_channels=1,
+                      internal_dim=internal_dim_mod,
+                      num_layers=num_layers_mod,
+                      num_freqs=num_freqs_mod,
+                      ff_func=ff_func_mod,
+                      conv=mod_conv,
+                      act=act_mod,)
+
+fmlp = ModulatedMLP(renderrer=renderrer,
+                    modulator=modulator).to(device)
+
 if checkpoint:
     logger.info(f'Loading checkpoint from {checkpoint}')
     fmlp.load_state_dict(torch.load(checkpoint))
