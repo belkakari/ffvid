@@ -1,0 +1,19 @@
+train:
+  experiment_name: 'freqwise_71_sininit'
+  device: 'cuda:1'
+  seed: false
+  logging_level: DEBUG
+  save_model: true
+  output_folder: /mnt/evo/data/fourier_video/exps
+generator:
+  phase_mod: true
+  phase_mod_type: freqwise
+  internal_dim: 128
+  num_layers: 8
+  act: LeakyReLU
+  ff_func: GaussianFourierFeatureTransform
+  gen_conv: ConLinear
+data:
+  dset_folder: /mnt/evo/data/fourier_video/data/frames/71
+  batch_size: 4
+  resolution: [256, 256]

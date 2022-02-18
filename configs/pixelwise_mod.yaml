@@ -1,0 +1,12 @@
+experiment_name: 'time'
+device: 'cuda:1'
+phase_mod: true
+phase_mod_type: pixelwise
+internal_dim: 64
+num_layers: 8
+act: LeakyReLU
+dset_folder: ./frames/71
+batch_size: 4
+resolution: [256, 256]
+seed: false
+logging_level: DEBUG

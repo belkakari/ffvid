@@ -1,0 +1,15 @@
+experiment_name: 'time'
+device: 'cuda:0'
+phase_mod: true
+phase_mod_type: freqwise
+internal_dim: 128
+num_layers: 8
+act: LeakyReLU
+dset_folder: ./frames/landscape
+batch_size: 1
+resolution: [440, 800]
+seed: false
+logging_level: DEBUG
+ff_func: GaussianFourierFeatureTransform
+save_model: true
+checkpoint: /home/gleb/code/jupyter/fourier_feats/output/0_50_2022_2_18/model.pth
